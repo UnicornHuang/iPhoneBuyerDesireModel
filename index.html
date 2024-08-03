@@ -1,0 +1,230 @@
+<html><head><base href="https://websim.creationengine.example/"><title>iPhone購買行為模式</title>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #e6f3f5;
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        color: #2c3e50;
+    }
+    .container {
+        display: flex;
+        width: 95%;
+        max-width: 1400px;
+        height: 90vh;
+        background-color: #ffffff;
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .control-panel {
+        width: 350px;
+        padding: 30px;
+        background-color: #f0f7fa;
+        border-right: 1px solid #bdd7e7;
+        overflow-y: auto;
+    }
+    #graphContainer {
+        flex-grow: 1;
+        height: 100%;
+    }
+    h1, h2 {
+        margin-top: 0;
+        font-size: 1.8em;
+        color: #34495e;
+    }
+    h2 {
+        font-size: 1.4em;
+        margin-top: 30px;
+    }
+    .slider-container {
+        margin-bottom: 25px;
+    }
+    input[type="range"] {
+        width: 100%;
+        margin-top: 10px;
+        -webkit-appearance: none;
+        background: #d1e8e2;
+        outline: none;
+        opacity: 0.7;
+        transition: opacity .2s;
+        border-radius: 5px;
+        height: 8px;
+    }
+    input[type="range"]:hover {
+        opacity: 1;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 25px;
+        height: 25px;
+        background: #3498db;
+        cursor: pointer;
+        border-radius: 50%;
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 25px;
+        height: 25px;
+        background: #3498db;
+        cursor: pointer;
+        border-radius: 50%;
+    }
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: #2980b9;
+        font-size: 1.1em;
+    }
+    .value-display {
+        font-weight: bold;
+        color: #16a085;
+        font-size: 1.2em;
+    }
+</style>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="control-panel">
+            <h1>iPhone購買行為模式控制</h1>
+            <div class="slider-container">
+                <label for="aSlider">a (慾望強度斜率): <span id="aValue" class="value-display">0.5</span></label>
+                <input type="range" id="aSlider" min="-2" max="2" step="0.1" value="0.5">
+            </div>
+            <div class="slider-container">
+                <label for="bSlider">b (慾望強度基準): <span id="bValue" class="value-display">0</span></label>
+                <input type="range" id="bSlider" min="-5" max="5" step="0.5" value="0">
+            </div>
+            <div class="slider-container">
+                <label for="cSlider">c (購買閾值): <span id="cValue" class="value-display">5</span></label>
+                <input type="range" id="cSlider" min="0" max="15" step="0.5" value="5">
+            </div>
+            
+            <h2>圖表調整</h2>
+            <div class="slider-container">
+                <label for="xMinSlider">最低薪資 (萬元/月): <span id="xMinValue" class="value-display">0</span></label>
+                <input type="range" id="xMinSlider" min="0" max="10" step="1" value="0">
+            </div>
+            <div class="slider-container">
+                <label for="xMaxSlider">最高薪資 (萬元/月): <span id="xMaxValue" class="value-display">15</span></label>
+                <input type="range" id="xMaxSlider" min="5" max="30" step="1" value="15">
+            </div>
+            <div class="slider-container">
+                <label for="yMinSlider">Y軸最小值: <span id="yMinValue" class="value-display">-0.1</span></label>
+                <input type="range" id="yMinSlider" min="-2" max="0" step="0.1" value="-0.1">
+            </div>
+            <div class="slider-container">
+                <label for="yMaxSlider">Y軸最大值: <span id="yMaxValue" class="value-display">1.1</span></label>
+                <input type="range" id="yMaxSlider" min="1" max="3" step="0.1" value="1.1">
+            </div>
+        </div>
+        <div id="graphContainer"></div>
+    </div>
+
+<script>
+function linear(x, a, b) {
+    return x.map(val => a * val + b);
+}
+
+function step(x, c) {
+    return x.map(val => val >= c ? 1 : 0);
+}
+
+function sigmoid(z) {
+    return z.map(val => 1 / (1 + Math.exp(-val)));
+}
+
+function updateGraph() {
+    const a = parseFloat(document.getElementById('aSlider').value);
+    const b = parseFloat(document.getElementById('bSlider').value);
+    const c = parseFloat(document.getElementById('cSlider').value);
+    const xMin = parseFloat(document.getElementById('xMinSlider').value);
+    const xMax = parseFloat(document.getElementById('xMaxSlider').value);
+    const yMin = parseFloat(document.getElementById('yMinSlider').value);
+    const yMax = parseFloat(document.getElementById('yMaxSlider').value);
+
+    document.getElementById('aValue').textContent = a.toFixed(1);
+    document.getElementById('bValue').textContent = b.toFixed(1);
+    document.getElementById('cValue').textContent = c.toFixed(1);
+    document.getElementById('xMinValue').textContent = xMin.toFixed(1);
+    document.getElementById('xMaxValue').textContent = xMax.toFixed(1);
+    document.getElementById('yMinValue').textContent = yMin.toFixed(1);
+    document.getElementById('yMaxValue').textContent = yMax.toFixed(1);
+
+    const x = Array.from({length: 1000}, (_, i) => xMin + (xMax - xMin) * i / 999);
+    const linearY = linear(x, a, b);
+    const stepY = step(x, c);
+    const sigmoidY = sigmoid(linearY);
+
+    const data = [
+        {x: x, y: linearY, type: 'scatter', mode: 'lines', name: '慾望強度', line: {color: '#27ae60', width: 3}},
+        {x: x, y: stepY, type: 'scatter', mode: 'lines', name: '購買行為', line: {color: '#2980b9', width: 3}},
+        {x: x, y: sigmoidY, type: 'scatter', mode: 'lines', name: '購買機率', line: {color: '#c0392b', width: 3}}
+    ];
+
+    const layout = {
+        title: {
+            text: 'iPhone購買行為模式',
+            font: {size: 24}
+        },
+        font: {family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif', size: 14},
+        paper_bgcolor: '#f0f7fa',
+        plot_bgcolor: '#f0f7fa',
+        xaxis: {
+            range: [xMin, xMax],
+            zeroline: true,
+            zerolinecolor: '#34495e',
+            zerolinewidth: 2,
+            title: {text: '薪資 (萬元/月)', font: {size: 18}},
+            gridcolor: '#bdc3c7',
+            tickfont: {size: 14}
+        },
+        yaxis: {
+            range: [yMin, yMax],
+            zeroline: true,
+            zerolinecolor: '#34495e',
+            zerolinewidth: 2,
+            title: {text: '行為 (買或不買)', font: {size: 18}},
+            gridcolor: '#bdc3c7',
+            tickfont: {size: 14}
+        },
+        legend: {
+            orientation: 'h',
+            y: -0.2,
+            font: {size: 16}
+        },
+        shapes: [
+            {type: 'line', x0: xMin, y0: 1, x1: xMax, y1: 1, line: {color: '#34495e', width: 2, dash: 'dot'}},
+        ],
+        showlegend: true,
+        margin: {l: 60, r: 40, t: 60, b: 60},
+        autosize: true
+    };
+
+    const config = {
+        responsive: true,
+        displayModeBar: false
+    };
+
+    Plotly.newPlot('graphContainer', data, layout, config);
+}
+
+window.addEventListener('resize', updateGraph);
+
+document.getElementById('aSlider').addEventListener('input', updateGraph);
+document.getElementById('bSlider').addEventListener('input', updateGraph);
+document.getElementById('cSlider').addEventListener('input', updateGraph);
+document.getElementById('xMinSlider').addEventListener('input', updateGraph);
+document.getElementById('xMaxSlider').addEventListener('input', updateGraph);
+document.getElementById('yMinSlider').addEventListener('input', updateGraph);
+document.getElementById('yMaxSlider').addEventListener('input', updateGraph);
+
+updateGraph();
+</script>
+
+</body></html>
